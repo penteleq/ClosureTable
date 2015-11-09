@@ -1,11 +1,14 @@
-<?php namespace Franzose\ClosureTable\Tests;
+<?php
+namespace Franzose\ClosureTable\Tests;
 
+use DB;
+use Franzose\ClosureTable\Models\ClosureTable;
 use Mockery;
 use Franzose\ClosureTable\Models\Entity;
 use Franzose\ClosureTable\Tests\Models\Page;
 
-class EntityTestCase extends BaseTestCase {
-
+class EntityTestCase extends BaseTestCase
+{
     /**
      * Tested entity.
      *
@@ -36,7 +39,7 @@ class EntityTestCase extends BaseTestCase {
         // TODO: Remove this when Laravel fixes the issue with model booting in tests
         if (self::$force_boot) {
             Entity::boot();
-           Page::boot();
+            Page::boot();
         } else {
             self::$force_boot = true;
         }
@@ -80,7 +83,10 @@ class EntityTestCase extends BaseTestCase {
 
     public function testCreate()
     {
+        DB::statement("SET foreign_key_checks=0");
+        ClosureTable::truncate();
         Entity::truncate();
+        DB::statement("SET foreign_key_checks=1");
 
         $entity1 = new Entity;
         $entity1->save();
@@ -138,16 +144,16 @@ class EntityTestCase extends BaseTestCase {
 
     public function testCreateDoesNotChangePositionOfSiblings()
     {
-         $entity1 = new Page(['title' => 'Item 1']);
-         $entity1->save();
+        $entity1 = new Page(['title' => 'Item 1']);
+        $entity1->save();
 
-         $id = $entity1->getKey();
+        $id = $entity1->getKey();
 
-         $entity2 = new Page(['title' => 'Item 2']);
-         $entity2->save();
+        $entity2 = new Page(['title' => 'Item 2']);
+        $entity2->save();
 
-         $this->assertEquals(10, $entity2->position);
-         $this->assertEquals(9, Entity::find($id)->position);
+        $this->assertEquals(10, $entity2->position);
+        $this->assertEquals(9, Entity::find($id)->position);
     }
 
     public function testCreateSetsRealDepth()
@@ -329,7 +335,7 @@ class EntityTestCase extends BaseTestCase {
     public function testGetChildAt()
     {
         $entity = Entity::find(9);
-        $child  = $entity->getChildAt(2);
+        $child = $entity->getChildAt(2);
 
         $this->assertInstanceOf('Franzose\ClosureTable\Models\Entity', $child);
         $this->assertEquals(2, $child->position);
@@ -338,7 +344,7 @@ class EntityTestCase extends BaseTestCase {
     public function testGetFirstChild()
     {
         $entity = Entity::find(9);
-        $child  = $entity->getFirstChild();
+        $child = $entity->getFirstChild();
 
         $this->assertInstanceOf('Franzose\ClosureTable\Models\Entity', $child);
         $this->assertEquals(0, $child->position);
@@ -347,7 +353,7 @@ class EntityTestCase extends BaseTestCase {
     public function testGetLastChild()
     {
         $entity = Entity::find(9);
-        $child  = $entity->getLastChild();
+        $child = $entity->getLastChild();
 
         $this->assertInstanceOf('Franzose\ClosureTable\Models\Entity', $child);
         $this->assertEquals(3, $child->position);
@@ -355,7 +361,7 @@ class EntityTestCase extends BaseTestCase {
 
     public function testGetChildrenRange()
     {
-        $entity   = Entity::find(9);
+        $entity = Entity::find(9);
         $children = $entity->getChildrenRange(0, 2);
 
         $this->assertInstanceOf('Franzose\ClosureTable\Extensions\Collection', $children);
@@ -628,9 +634,8 @@ class EntityTestCase extends BaseTestCase {
 
         $this->assertCount(9, $roots);
 
-        foreach($roots as $idx => $root)
-        {
-            $this->assertEquals($idx+1, $roots->get($idx)->getKey());
+        foreach ($roots as $idx => $root) {
+            $this->assertEquals($idx + 1, $roots->get($idx)->getKey());
         }
     }
 
@@ -673,8 +678,8 @@ class EntityTestCase extends BaseTestCase {
         $entity = Entity::find(9);
         $entity->deleteSubtree();
 
-        $this->assertCount(1, Entity::whereBetween('id', [9, 15])->get());
-        $this->assertCount(8, Entity::whereBetween('id', [1, 8])->get());
+        $this->assertEquals(1, Entity::whereBetween('id', [9, 15])->count());
+        $this->assertEquals(8, Entity::whereBetween('id', [1, 8])->count());
     }
 
     public function testDeleteSubtreeWithAncestor()
@@ -682,8 +687,43 @@ class EntityTestCase extends BaseTestCase {
         $entity = Entity::find(9);
         $entity->deleteSubtree(true);
 
-        $this->assertCount(0, Entity::whereBetween('id', [9, 15])->get());
-        $this->assertCount(8, Entity::whereBetween('id', [1, 8])->get());
+        $this->assertEquals(0, Entity::whereBetween('id', [9, 15])->count());
+        $this->assertEquals(8, Entity::whereBetween('id', [1, 8])->count());
+    }
+
+    public function testForceDeleteSubtree()
+    {
+        $entity = Entity::find(9);
+        $entity->deleteSubtree(false, true);
+
+        $this->assertEquals(1, Entity::whereBetween('id', [9, 15])->count());
+        $this->assertEquals(1, ClosureTable::whereBetween('ancestor', [9, 15])->count());
+    }
+
+    public function testForceDeleteDeepSubtree()
+    {
+        Entity::find(9)->moveTo(0, 8);
+        Entity::find(8)->moveTo(0, 7);
+        Entity::find(7)->moveTo(0, 6);
+        Entity::find(6)->moveTo(0, 5);
+        Entity::find(5)->moveTo(0, 4);
+        Entity::find(4)->moveTo(0, 3);
+        Entity::find(3)->moveTo(0, 2);
+        Entity::find(2)->moveTo(0, 1);
+
+        Entity::find(1)->deleteSubtree(false, true);
+
+        $this->assertEquals(1, Entity::whereBetween('id', [1, 9])->count());
+        $this->assertEquals(1, ClosureTable::whereBetween('ancestor', [1, 9])->count());
+    }
+
+    public function testForceDeleteSubtreeWithSelf()
+    {
+        $entity = Entity::find(9);
+        $entity->deleteSubtree(true, true);
+
+        $this->assertEquals(0, Entity::whereBetween('id', [9, 15])->count());
+        $this->assertEquals(0, ClosureTable::whereBetween('ancestor', [9, 15])->count());
     }
 
     public function testCreateFromArray()
@@ -789,5 +829,94 @@ class EntityTestCase extends BaseTestCase {
         $this->assertEquals('child 2', $child2->title);
         $this->assertEquals(0, $child2->countChildren());
         $this->assertEquals(19, $child2->getKey());
+    }
+
+    public function testInsertNode()
+    {
+        $entity = Entity::create(['title' => 'abcde']);
+        $closure = ClosureTable::whereDescendant($entity->getKey())->first();
+
+        $this->assertNotNull($closure);
+        $this->assertEquals($entity->getKey(), $closure->ancestor);
+        $this->assertEquals(0, $closure->depth);
+    }
+
+    public function testInsertedNodeDepth()
+    {
+        $entity = Entity::create(['title' => 'abcde']);
+        $child = Entity::create(['title' => 'abcde']);
+        $child->moveTo(0, $entity);
+
+        $closure = ClosureTable::whereDescendant($child->getKey())
+            ->whereAncestor($entity->getKey())->first();
+
+        $this->assertNotNull($closure);
+        $this->assertEquals(1, $closure->depth);
+    }
+
+    public function testValidNumberOfRowsInsertedByInsertNode()
+    {
+        $ancestor = Entity::create(['title' => 'abcde']);
+        $descendant = Entity::create(['title' => 'abcde']);
+        $descendant->moveTo(0, $ancestor);
+
+        $ancestorRows = ClosureTable::whereDescendant($ancestor->getKey())->count();
+        $descendantRows = ClosureTable::whereDescendant($descendant->getKey())->count();
+
+        $this->assertEquals(1, $ancestorRows);
+        $this->assertEquals(2, $descendantRows);
+    }
+
+    public function testMoveNodeToAnotherAncestor()
+    {
+        $descendant = Entity::find(1);
+        $descendant->moveTo(0, 2);
+
+        $ancestors = ClosureTable::whereDescendant(2)->count();
+        $descendants = ClosureTable::whereDescendant(1)->count();
+
+        $this->assertEquals(1, $ancestors);
+        $this->assertEquals(2, $descendants);
+    }
+
+    public function testMoveNodeToDeepNesting()
+    {
+        $item = Entity::find(1);
+        $item->moveTo(0, 2);
+
+        $item = Entity::find(2);
+        $item->moveTo(0, 3);
+
+        $item = Entity::find(3);
+        $item->moveTo(0, 4);
+
+        $item = Entity::find(4);
+        $item->moveTo(0, 5);
+
+        $descendantRows = ClosureTable::whereDescendant(1)->count();
+        $ancestorRows = ClosureTable::whereDescendant(2)->count();
+
+        $this->assertEquals(4, $ancestorRows);
+        $this->assertEquals(5, $descendantRows);
+    }
+
+    public function testMoveNodeToBecomeRoot()
+    {
+        $item = Entity::find(1);
+        $item->moveTo(0, 2);
+
+        $item = Entity::find(2);
+        $item->moveTo(0, 3);
+
+        $item = Entity::find(3);
+        $item->moveTo(0, 4);
+
+        $item = Entity::find(4);
+        $item->moveTo(0, 5);
+
+        $item = Entity::find(1);
+        $item->moveTo(0);
+
+        $this->assertEquals(1, ClosureTable::whereDescendant(1)->count());
     }
 }

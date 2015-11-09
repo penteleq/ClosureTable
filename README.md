@@ -1,16 +1,18 @@
-# ClosureTable 3
+# ClosureTable
 [![Build Status](https://travis-ci.org/franzose/ClosureTable.png)](https://travis-ci.org/franzose/ClosureTable)
 [![Latest Stable Version](https://poser.pugx.org/franzose/closure-table/v/stable.png)](https://packagist.org/packages/franzose/closure-table)
 [![Total Downloads](https://poser.pugx.org/franzose/closure-table/downloads.png)](https://packagist.org/packages/franzose/closure-table)
 
-Let me introduce the third version of my package for Laravel 4. It's intended to use when you need to operate hierarchical data in database. The package is an implementation of a well-known database design pattern called Closure Table. The third version includes many bugfixes and improvements including models and migrations generator.
+## NOTE: Master branch is now for Laravel 5.<br>If you use Laravel 4, please see L4 branch! 
+
+Hi, this is a database package for Laravel. It's intended to use when you need to operate hierarchical data in database. The package is an implementation of a well-known database design pattern called Closure Table. The package includes generators for models and migrations.
 
 ## Installation
 To install the package, put the following in your composer.json:
 
 ```json
 "require": {
-	"franzose/closure-table": "dev-master"
+	"franzose/closure-table": "4.*"
 }
 ```
 
@@ -24,7 +26,7 @@ And to `app/config/app.php`:
 
 ## Setup your ClosureTable
 ### Create models and migrations
-For example, let's assume you're working on pages. In version 3, you can just use an `artisan` command to create models and migrations automatically without preparing all the stuff by hand. Open terminal and put the following:
+For example, let's assume you're working on pages. You can just use an `artisan` command to create models and migrations automatically without preparing all the stuff by hand. Open terminal and put the following:
 
 ```bash
 php artisan closuretable:make --entity=page
@@ -38,6 +40,7 @@ All options of the command:<br>
 5. `--closure-table` _[optional]_, `-ct`: closure table name<br>
 6. `--models-path`, `-mdl` _[optional]_: custom models path<br>
 7. `--migrations-path`, `-mgr` _[optional]_: custom migrations path<br>
+8.  `--use-innodb` and `-i` _[optional]_: InnoDB migrations have been made optional as well with new paramaters. Setting this will enable the InnoDB engine.
 
 That's almost all, folks! The ‘dummy’ stuff has just been created for you. You will need to add some fields to your entity migration because the created ‘dummy’ includes just **required** `id`, `parent_id`, `position`, and `real depth` columns:<br>
 
@@ -70,6 +73,7 @@ $parent = Page::find(15)->getParent();
 ```php
 $page = Page::find(15);
 $ancestors = $page->getAncestors();
+$ancestors = $page->getAncestorsTree(); // Tree structure
 $ancestors = $page->getAncestorsWhere('position', '=', 1);
 $hasAncestors = $page->hasAncestors();
 $ancestorsNumber = $page->countAncestors();
@@ -99,6 +103,9 @@ $page->addChild($newChild);
 
 //you can set child position
 $page->addChild($newChild, 5);
+
+//you can get the child
+$child = $page->addChild($newChild, null, true);
 
 $page->addChildren([$newChild, $newChild2]);
 
@@ -150,6 +157,9 @@ $sibligns = $page->getSiblingsRange(0, 2);
 
 $page->addSibling(new Page);
 $page->addSibling(new Page, 3); //third position
+
+//add and get the sibling
+$sibling = $page->addSibling(new Page, null, true);
 
 $page->addSiblings([new Page, new Page]);
 $page->addSiblings([new Page, new Page], 5); //insert from fifth position

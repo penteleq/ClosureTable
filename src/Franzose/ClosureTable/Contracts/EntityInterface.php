@@ -1,12 +1,13 @@
-<?php namespace Franzose\ClosureTable\Contracts;
+<?php
+namespace Franzose\ClosureTable\Contracts;
 
 /**
  * Basic Entity model interface.
  *
  * @package Franzose\ClosureTable\Contracts
  */
-interface EntityInterface {
-
+interface EntityInterface
+{
     /**
      * Gets the short name of the "parent id" column.
      *
@@ -224,9 +225,10 @@ interface EntityInterface {
      *
      * @param EntityInterface $child
      * @param int $position
-     * @return $this
+     * @param bool $returnChild
+     * @return EntityInterface
      */
-    public function addChild(EntityInterface $child, $position = null);
+    public function addChild(EntityInterface $child, $position = null, $returnChild = false);
 
     /**
      * Appends multiple children to the model.
@@ -387,9 +389,10 @@ interface EntityInterface {
      *
      * @param EntityInterface $sibling
      * @param int|null $position
-     * @return $this
+     * @param bool $returnSibling
+     * @return EntityInterface
      */
-    public function addSibling(EntityInterface $sibling, $position = null);
+    public function addSibling(EntityInterface $sibling, $position = null, $returnSibling = false);
 
     /**
      * Appends multiple siblings within the current depth.
@@ -445,7 +448,7 @@ interface EntityInterface {
      *
      * @param bool $withSelf
      * @param bool $forceDelete
-     * @return mixed
+     * @return void
      */
     public function deleteSubtree($withSelf = false, $forceDelete = false);
 }

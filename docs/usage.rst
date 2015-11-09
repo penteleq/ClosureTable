@@ -49,12 +49,15 @@ Direct descendants (children)
 		'content' => 'The content of a child'
 	));
 
-	$page->appendChild($newChild);
+	$page->addChild($newChild);
 
 	//you can set child position
-	$page->appendChild($newChild, 5);
+	$page->addChild($newChild, 5);
 
-	$page->appendChildren([$newChild, $newChild2]);
+	//you can get the child
+	$child = $page->addChild($newChild, null, true);
+
+	$page->addChildren([$newChild, $newChild2]);
 
 	$page->getChildAt(5);
 	$page->getFirstChild();
@@ -107,6 +110,9 @@ Siblings
 	$page->addSibling(new Page);
 	$page->addSibling(new Page, 3); //third position
 
+	//add and get the sibling
+	$sibling = $page->addSibling(new Page, null, true);
+
 	$page->addSiblings([new Page, new Page]);
 	$page->addSiblings([new Page, new Page], 5); //insert from fifth position
 
@@ -147,7 +153,7 @@ Moving
 	$page->moveTo(0, 14);
 
 Deleting subtree
------------------
+----------------
 
 If you don't use foreign keys for some reason, you can delete subtree manually. This will delete the page and all its descendants:
 
